@@ -1,7 +1,8 @@
 from matplotlib import pyplot as plt
 import numpy as np
-from scipy.integrate import solve_ivp
+from scipy.integrate import solve_bvp
 from typing import List
+from functools import partial
 import os
 import sys
 
@@ -24,6 +25,9 @@ d_0 = constants["d_0"]
 c_0 = constants["c_0"]
 b_0 = constants["b_0"]
 m_0 = constants["m_0"]
+a = constants["a"]
+c = constants["c"]
+h = constants["h"]
 k=constants["k"]
 lambda_s_2nu_s = constants["lambda_s+2nu_s"]
 v_inc = constants["v_inc"]
@@ -34,17 +38,22 @@ p_inc = constants["p_inc"]
 
 # Определяем коэффициент при интерактивных силах:
 def f_m(f_0: float, m_0: float, m: List[float]) -> List[float]:
-    return f_0 * (m_0 / m) * ((1 - m) / (1 - m_0)) # f = f_0 * (m0 / m) * ((1 - m) / (1 - m0))
+    m_val = np.where(m == 0, 1e-9, m)  # Замена нулей на очень маленькое значение
+    return f_0 * (m_0 / m_val) * ((1 - m_val) / (1 - m_0)) # f = f_0 * (m0 / m) * ((1 - m) / (1 - m0))
 
 
 # Определяем A(m, v):
 def A_m_v(C: float, Q: float, m_0: float, a: float, c: float, h: float, m: List[float], v: List[float]) -> List[float]:
-    return (1 - m_0) * C * Q / (m * m * v) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / ((1 - m) * (1 - m)) # A(m, v) = (1 - m_0) * C * Q / (m^2 * v) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / (1 - m)^2
+    m_val = np.where(m == 0, 1e-9, m)  # Замена нулей на очень маленькое значение
+    v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
+    return (1 - m_0) * C * Q / (m_val * m_val * v_val) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / ((1 - m_val) * (1 - m_val)) # A(m, v) = (1 - m_0) * C * Q / (m^2 * v) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / (1 - m)^2
 
 
 # Определяем B(m, v):
 def B_m_v(C: float, Q: float, m_0: float, b_0: float, m: List[float], v: List[float]) -> List[float]:
-    return (1 - m_0) * C * Q / (m * v * v) + f_m(b_0, m_0, m) * v # B(m, v) = (1 - m_0) * C * Q / (m * v^2) + b(m) * v
+    m_val = np.where(m == 0, 1e-9, m)  # Замена нулей на очень маленькое значение
+    v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
+    return (1 - m_0) * C * Q / (m_val * v_val * v_val) + f_m(b_0, m_0, m) * v_val # B(m, v) = (1 - m_0) * C * Q / (m * v^2) + b(m) * v
 
 
 # Определяем C(m, v):
@@ -59,7 +68,8 @@ def D_m_v(p_0: float, C: float, ro_f_ist_0: float) -> float:
 
 # Определяем E(m, v):
 def E_m_v(C: float, Q: float, m_0: float, b_0: float, m: List[float], v: List[float]) -> List[float]:
-    return (1 - m_0) * C * Q / (v * v) - f_m(b_0, m_0, m) * v - Q # E(m, v) = (1 - m_0) * C * Q / v^2 - b(m) * v - Q
+    v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
+    return (1 - m_0) * C * Q / (v_val * v_val) - f_m(b_0, m_0, m) * v_val - Q # E(m, v) = (1 - m_0) * C * Q / v^2 - b(m) * v - Q
 
 
 # Определяем систему уравнений:
@@ -69,21 +79,37 @@ def ode_system(C: float, Q: float, m_0: float, a: float, c: float, h: float, x: 
     dvdx = (A_m_v(C, Q, m_0, a, c, h, m, v) * C_m_v(c_0, m_0, m, v) + C_m_v(c_0, m_0, m, v) * D_m_v(p_0, C, ro_f_ist_0)) / (A_m_v(C, Q, m_0, a, c, h, m, v) * E_m_v(C, Q, m_0, b_0, m, v) - B_m_v(C, Q, m_0, b_0, m, v) * D_m_v(p_0, C, ro_f_ist_0))
     return [dmdx, dvdx]
 
-def solve_system(a, b, c, e, p, l, initial_conditions, x_span):
-    sol = solve_ivp(ode_system, x_span, initial_conditions, args=(a, b, c, e, p, l), t_eval=np.linspace(x_span[0], x_span[1], 100))
-    return sol
 
-# Define your functions a, b, c, e, p, l as needed
+# Определение граничных условий y[0] = m, y[1] = v
+def bc_v_inc(ya: List[List[float]], yb: List[List[float]], v_inc: float, m_0: float) -> List[List[float]]:                               
+    return np.array([
+        yb[0] - m_0, # для m(b) = m_0
+        ya[1] - v_inc / m_0, # для v(a) = v_inc / m
+        ])
 
-# Define initial conditions and x_span
-initial_conditions = [m_initial, v_initial]  # Initial conditions for m and v
-x_span = [x_initial, x_final]  # Initial and final value of x
 
-# Solve the system of equations
-solution = solve_system(a, b, c, e, p, l, initial_conditions, x_span)
+# Решение дифференциальной системы уравнений
+def solving_equations(v_inc: float, m_0: float, a: float, c: float, h: float, x_plot: List[float]) -> List[List[float]]:
+    Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Вычисляем расход жидкости, используя граничное условие p(0)=p_inc и v(0)=v_inc/m
+    x = np.linspace(0, L, N) # Заполняем массив координат х нулями
+    y_guess = np.zeros((2, x.size)) # Начальные значения функций
+    result = solve_bvp(lambda x, y_guess: ode_system(C, Q, m_0, a, c, h, x, y_guess), lambda ya, yb: bc_v_inc(ya, yb, v_inc, m_0), x, y_guess, tol=1e-6) # Решаем систему уравнений
+    y_plot = result.sol(x_plot) # (m(x), v(x))
+    return y_plot # y[0] = m, y[1] = v
 
-# Extract the solution
-m = solution.y[0]
-v = solution.y[1]
-x_values = solution.t
 
+# Получение значения,
+# где N - разбиение по х от 0 до L, M - разбие
+# ние входящих скоростей v_inc от v_inc_start до v_inc_finish
+# из аргументов командной строки
+if len(sys.argv) > 2:  # Если аргумент был передан
+    N = int(sys.argv[1])
+    M = int(sys.argv[2])
+else:
+    N = 100
+    M = 200
+
+x_plot = np.linspace(0, L, N) # Массив значений координат х 
+
+answer = solving_equations(v_inc, m_0, a, c, h, x_plot)
+print(answer)
