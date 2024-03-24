@@ -4,7 +4,7 @@ from matplotlib import ticker as mtick
 import numpy as np
 from scipy.integrate import solve_bvp
 from functools import partial
-import pickle
+from typing import List
 import os
 import sys
 
@@ -39,7 +39,7 @@ v_inc_finish=constants["v_inc_finish"]
 
 
 # Определение функции для системы дифференциальных уравнений
-def fun(r, y, Q): # y[0] = u, y[1] = v, y[2] = s
+def fun(r: List[float], y: List[List[float]], Q: float) -> List[List[float]]: # y[0] = u, y[1] = v, y[2] = s
     v = np.where(y[1] == 0, 1e-9, y[1])  # Замена нулей на очень маленькое значение
 
     dudr = y[2]
@@ -53,7 +53,7 @@ def fun(r, y, Q): # y[0] = u, y[1] = v, y[2] = s
 
 
 # Определение граничных условий y[0] = u, y[1] = v, y[2] = s
-def bc_v_inc(ya, yb, v_inc):                               
+def bc_v_inc(ya: List[List[float]], yb: List[List[float]], v_inc: float) -> List[List[float]]:                               
     return np.array([
         ya[0] - 0, # для u(a) = 0
         ya[1] - v_inc / m, # для v(a) = v_inc / m
@@ -62,7 +62,7 @@ def bc_v_inc(ya, yb, v_inc):
 
 
 # Решение дифференциальной системы уравнений
-def solving_equations(v_inc, r_plot):
+def solving_equations(v_inc: float, r_plot: List[float]) -> List[List[float]]:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Вычисляем расход жидкости, используя граничное условие p(a)=p_inc и v(a)=v_inc/m
     r = np.linspace(a, b, N) # Заполняем массив координат r нулями
     y_guess = np.zeros((3, r.size)) # Пример np.zeros((2, 1)) ---> array([[ 0.],[ 0.]]) - начальные значения функций
@@ -73,7 +73,7 @@ def solving_equations(v_inc, r_plot):
 
 
 # Вычисление числа Рейнольдса и В в зависимости от параметра v_inc
-def calculation_Re_and_B(r_plot, v_inc_start, v_inc_finish, M):
+def calculation_Re_and_B(r_plot: List[float], v_inc_start: float, v_inc_finish: float, M: int) -> List[List[float]]:
     v_inc_values = np.linspace(v_inc_start, v_inc_finish, M) # Массив значений входящих скоростей v_inc
     Re_values = [] # Массив чисел Рейнольдса для каждой скорости v_inc
     B_values = [] # Массив чисел B для каждой скорости v_inc
@@ -94,7 +94,7 @@ def calculation_Re_and_B(r_plot, v_inc_start, v_inc_finish, M):
 
 
 # Построение графика скорости v/v_inc(x/a)
-def plot_velocity_ratio(solve_with_Fb, solve_without_Fb, v_inc, x_plot):
+def plot_velocity_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], v_inc: float, x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / a, solve_without_Fb[1] / v_inc, label='b_0 = 0', linestyle='dashed')
     plt.plot(x_plot / a, solve_with_Fb[1] / v_inc, label='b_0 != 0', linestyle='dotted')
@@ -108,7 +108,7 @@ def plot_velocity_ratio(solve_with_Fb, solve_without_Fb, v_inc, x_plot):
 
 
 # Построение графика перемещения u/a(x/a)
-def plot_u_l_ratio(solve_with_Fb, solve_without_Fb, x_plot):
+def plot_u_l_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / a, solve_without_Fb[0] / a, label='b_0 = 0', linestyle='dashed')
     plt.plot(x_plot / a, solve_with_Fb[0] / a, label='b_0 != 0', linestyle='dotted')
@@ -122,7 +122,7 @@ def plot_u_l_ratio(solve_with_Fb, solve_without_Fb, x_plot):
 
 
 # Построение графика плотности жидкости ro_ist/ro_ist_0
-def plot_density_ratio(solve_with_Fb, solve_without_Fb, x_plot):
+def plot_density_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a * a # Q = ro_ist * m * v * r^2
 
     ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot * x_plot)
@@ -141,7 +141,7 @@ def plot_density_ratio(solve_with_Fb, solve_without_Fb, x_plot):
 
 
 # Построение графика давления жидкости p/p_0(x/a)
-def plot_pressure_ratio(solve_with_Fb, solve_without_Fb, x_plot):
+def plot_pressure_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Q = ro_ist * m * v * r^2
 
     ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot * x_plot)
@@ -162,7 +162,7 @@ def plot_pressure_ratio(solve_with_Fb, solve_without_Fb, x_plot):
 
 
 # Построение графика тензора напряжения жидкости sigma_f/p_0(x/a)
-def plot_sigma_f_ratio(solve_with_Fb, solve_without_Fb, x_plot):
+def plot_sigma_f_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Q = ro_ist * m * v * r^2
 
     ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot * x_plot)
@@ -186,7 +186,7 @@ def plot_sigma_f_ratio(solve_with_Fb, solve_without_Fb, x_plot):
 
 
 # Построение графика тензора напряжения каркаса sigma_s_rr/p_0(x/a)
-def plot_sigma_s_rr_ratio(solve_with_Fb, solve_without_Fb, x_plot):
+def plot_sigma_s_rr_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Q = ro_ist * m * v * r^2
 
     ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot * x_plot)
@@ -209,7 +209,7 @@ def plot_sigma_s_rr_ratio(solve_with_Fb, solve_without_Fb, x_plot):
     plt.show()
 
 # Построение графика тензора напряжения каркаса sigma_s_phiphi/p_0(x/a)
-def plot_sigma_s_phiphi_ratio(solve_with_Fb, solve_without_Fb, x_plot):
+def plot_sigma_s_phiphi_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Q = ro_ist * m * v * r^2
 
     ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot * x_plot)
