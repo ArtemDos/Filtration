@@ -24,7 +24,7 @@ C = constants["C"]
 d_0 = constants["d_0"]
 c_0 = constants["c_0"]
 b_0 = constants["b_0"]
-m = constants["m"]
+m_0 = constants["m_0"]
 k=constants["k"]
 nu=constants["nu"]
 lambda_s = constants["lambda_s"]
@@ -43,7 +43,7 @@ def fun(r: List[float], y: List[List[float]], Q: float) -> List[List[float]]: # 
 
     dudr = y[2]
     dvdr = (d_0 * v + c_0 * v * v - Q * C / (v * r**2)) / (C * Q / (v**2 * r) - Q / r - b_0 * v)
-    dsdr = -1 / (lambda_s + 2 * nu_s) * ((b_0 * v + (1 - m) * C * Q / (m * r * v**2)) * dvdr + (1 - m) * C * Q / (m * v * r**2) + d_0 * v + c_0 * v**2) -  y[2] / r + y[0] / r**2
+    dsdr = -1 / (lambda_s + 2 * nu_s) * ((b_0 * v + (1 - m_0) * C * Q / (m_0 * r * v**2)) * dvdr + (1 - m_0) * C * Q / (m_0 * v * r**2) + d_0 * v + c_0 * v**2) -  y[2] / r + y[0] / r**2
     return [
         dudr, 
         dvdr,
@@ -55,7 +55,7 @@ def fun(r: List[float], y: List[List[float]], Q: float) -> List[List[float]]: # 
 def bc_v_inc(ya: List[List[float]], yb: List[List[float]], v_inc: float) -> List[List[float]]:                               
     return np.array([
         ya[0] - 0, # для u(a) = 0
-        ya[1] - v_inc / m, # для v(a) = v_inc / m
+        ya[1] - v_inc / m_0, # для v(a) = v_inc / m
         (lambda_s + 2 * nu_s) * yb[2] + lambda_s * 2 * yb[0] / b # (lambda_s + 2 * nu_s) * s(b) + lambda_s * 2 * u(b) / b = 0
         ])
 
@@ -81,10 +81,10 @@ def calculation_Re_and_B(r_plot: List[float], v_inc_start: float, v_inc_finish: 
         solve = solving_equations(v_inc, r_plot) # y[0] = u, y[1] = v, y[2] = s
         # Вычисление Re и B
         Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Вычисляем расход жидкости, используя граничное условие p(a)=p_inc и v(a)=v_inc/m
-        Re = Q * np.sqrt(k / m) / nu
+        Re = Q * np.sqrt(k / m_0) / nu
         v = solve[1]  # Скорость жидкости
         dvdr = (d_0 * v + c_0 * v * v - 2 * Q * C / (v * r_plot**3)) / (C * Q / (v**2 * r_plot**2) - Q / r_plot**2 - b_0 * v)  # Производная скорости
-        B = v / (dvdr * np.sqrt(k / m))
+        B = v / (dvdr * np.sqrt(k / m_0))
         # Добавление максимальных значений Re и B
         Re_values.append(np.max(Re))
         B_values.append(np.max(B))
@@ -124,8 +124,8 @@ def plot_u_l_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_
 def plot_density_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a # Q = ro_ist * m * v * r
 
-    ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot)
-    ro_values_without_Fb = Q / (m * solve_without_Fb[1] * x_plot)
+    ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1] * x_plot)
+    ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1] * x_plot)
     
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / a, ro_values_without_Fb / ro_f_ist_0, label='b_0 = 0', linestyle='dashed')
@@ -143,8 +143,8 @@ def plot_density_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float]
 def plot_pressure_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a # Q = ro_ist * m * v * r
 
-    ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot)
-    ro_values_without_Fb = Q / (m * solve_without_Fb[1] * x_plot)
+    ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1] * x_plot)
+    ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1] * x_plot)
 
     p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
     p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
@@ -164,14 +164,14 @@ def plot_pressure_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float
 def plot_sigma_f_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a # Q = ro_ist * m * v * r
 
-    ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot)
-    ro_values_without_Fb = Q / (m * solve_without_Fb[1] * x_plot)
+    ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1] * x_plot)
+    ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1] * x_plot)
 
     p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
     p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
 
-    sigma_f_with_Fb = - m * p_values_with_Fb # sigma_f =  - p * m
-    sigma_f_without_Fb = - m * p_values_without_Fb
+    sigma_f_with_Fb = - m_0 * p_values_with_Fb # sigma_f =  - p * m
+    sigma_f_without_Fb = - m_0 * p_values_without_Fb
 
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / a, sigma_f_without_Fb / p_0, label='b_0 = 0', linestyle='dashed')
@@ -188,14 +188,14 @@ def plot_sigma_f_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float]
 def plot_sigma_s_rr_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a # Q = ro_ist * m * v * r
 
-    ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot)
-    ro_values_without_Fb = Q / (m * solve_without_Fb[1] * x_plot)
+    ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1] * x_plot)
+    ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1] * x_plot)
 
     p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
     p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
 
-    sigma_s_rr_with_Fb = -(1 - m) * p_values_with_Fb + lambda_s * (solve_with_Fb[2] + solve_with_Fb[0] / x_plot) + 2 * nu_s * solve_with_Fb[2]
-    sigma_s_rr_without_Fb = -(1 - m) * p_values_without_Fb + lambda_s * (solve_without_Fb[2] + solve_without_Fb[0] / x_plot) + 2 * nu_s * solve_without_Fb[2]
+    sigma_s_rr_with_Fb = -(1 - m_0) * p_values_with_Fb + lambda_s * (solve_with_Fb[2] + solve_with_Fb[0] / x_plot) + 2 * nu_s * solve_with_Fb[2]
+    sigma_s_rr_without_Fb = -(1 - m_0) * p_values_without_Fb + lambda_s * (solve_without_Fb[2] + solve_without_Fb[0] / x_plot) + 2 * nu_s * solve_without_Fb[2]
 
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / a, sigma_s_rr_without_Fb / p_0, label='b_0 = 0', linestyle='dashed')
@@ -211,14 +211,14 @@ def plot_sigma_s_rr_ratio(solve_with_Fb: List[float], solve_without_Fb: List[flo
 def plot_sigma_s_phiphi_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Q = ro_ist * m * v * r^2
 
-    ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot * x_plot)
-    ro_values_without_Fb = Q / (m * solve_without_Fb[1] * x_plot * x_plot)
+    ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1] * x_plot * x_plot)
+    ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1] * x_plot * x_plot)
 
     p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
     p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
 
-    sigma_s_phiphi_with_Fb = -(1 - m) * p_values_with_Fb + lambda_s * (solve_with_Fb[2] + solve_with_Fb[0] / x_plot) + 2 * nu_s * solve_with_Fb[0] / x_plot
-    sigma_s_phiphi_without_Fb = -(1 - m) * p_values_without_Fb + lambda_s * (solve_without_Fb[2] + solve_without_Fb[0] / x_plot) + 2 * nu_s * solve_without_Fb[0] / x_plot
+    sigma_s_phiphi_with_Fb = -(1 - m_0) * p_values_with_Fb + lambda_s * (solve_with_Fb[2] + solve_with_Fb[0] / x_plot) + 2 * nu_s * solve_with_Fb[0] / x_plot
+    sigma_s_phiphi_without_Fb = -(1 - m_0) * p_values_without_Fb + lambda_s * (solve_without_Fb[2] + solve_without_Fb[0] / x_plot) + 2 * nu_s * solve_without_Fb[0] / x_plot
 
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / a, sigma_s_phiphi_without_Fb / p_0, label='b_0 = 0', linestyle='dashed')
@@ -235,14 +235,14 @@ def plot_sigma_s_phiphi_ratio(solve_with_Fb: List[float], solve_without_Fb: List
 def plot_sigma_s_zz_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc * a**2 # Q = ro_ist * m * v * r^2
 
-    ro_values_with_Fb = Q / (m * solve_with_Fb[1] * x_plot * x_plot)
-    ro_values_without_Fb = Q / (m * solve_without_Fb[1] * x_plot * x_plot)
+    ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1] * x_plot * x_plot)
+    ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1] * x_plot * x_plot)
 
     p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
     p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
 
-    sigma_s_zz_with_Fb = -(1 - m) * p_values_with_Fb + lambda_s * (solve_with_Fb[2] + solve_with_Fb[0] / x_plot)
-    sigma_s_zz_without_Fb = -(1 - m) * p_values_without_Fb + lambda_s * (solve_without_Fb[2] + solve_without_Fb[0] / x_plot)
+    sigma_s_zz_with_Fb = -(1 - m_0) * p_values_with_Fb + lambda_s * (solve_with_Fb[2] + solve_with_Fb[0] / x_plot)
+    sigma_s_zz_without_Fb = -(1 - m_0) * p_values_without_Fb + lambda_s * (solve_without_Fb[2] + solve_without_Fb[0] / x_plot)
 
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / a, sigma_s_zz_without_Fb / p_0, label='b_0 = 0', linestyle='dashed')
