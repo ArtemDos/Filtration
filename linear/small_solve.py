@@ -90,7 +90,7 @@ def calculation_Re_and_B(x_plot: List[float], v_inc_start: float, v_inc_finish: 
 
 
 # Построение графика скорости v/v_inc(x/L)
-def plot_velocity_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], v_inc: float, x_plot: List[float]) -> None:
+def plot_velocity_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], v_inc: float, x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / L, solve_without_Fb[1] / v_inc, label='b_0 = 0', linestyle='dashed')
     plt.plot(x_plot / L, solve_with_Fb[1] / v_inc, label='b_0 != 0', linestyle='dotted')
@@ -103,7 +103,7 @@ def plot_velocity_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float
 
 
 # Построение графика перемещения u/L(x/L)
-def plot_u_l_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
+def plot_u_l_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
     plt.plot(x_plot / L, solve_without_Fb[0] / L, label='b_0 = 0', linestyle='dashed')
     plt.plot(x_plot / L, solve_with_Fb[0] / L, label='b_0 != 0', linestyle='dotted')
@@ -116,7 +116,7 @@ def plot_u_l_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_
 
 
 # Построение графика плотности жидкости ro_ist/ro_ist_0
-def plot_density_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
+def plot_density_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
     ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1])
     ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1])
@@ -132,7 +132,7 @@ def plot_density_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float]
 
 
 # Построение графика давления жидкости p/p_0(x/L)
-def plot_pressure_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
+def plot_pressure_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
     ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1])
     ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1])
@@ -149,7 +149,7 @@ def plot_pressure_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float
 
 
 # Построение графика тензора напряжения жидкости sigma_f/p_0(x/L)
-def plot_sigma_f_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
+def plot_sigma_f_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
     ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1])
     ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1])
@@ -168,7 +168,7 @@ def plot_sigma_f_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float]
 
 
 # Построение графика тензора напряжения каркаса sigma_s/p_0(x/L)
-def plot_sigma_s_ratio(solve_with_Fb: List[float], solve_without_Fb: List[float], x_plot: List[float]) -> None:
+def plot_sigma_s_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
     ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1])
     ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1])
