@@ -8,6 +8,7 @@ import os
 import sys
 
 
+
 const_file_path = os.path.expanduser("./const.txt")
 
 #читаем константы из файла 
@@ -17,6 +18,7 @@ with open(const_file_path, "r") as f:
         key, value = line.strip().split("=")
         constants[key] = float(value)
 
+
 # Присваиваем считанные значения переменным
 L = constants["L"]
 C = constants["C"]
@@ -24,16 +26,44 @@ d_0 = constants["d_0"]
 c_0 = constants["c_0"]
 b_0 = constants["b_0"]
 m_0 = constants["m_0"]
+a = constants["a"]
+c = constants["c"]
+h = constants["h"]
 k=constants["k"]
-nu=constants["nu"]
 lambda_s_2nu_s = constants["lambda_s+2nu_s"]
 v_inc = constants["v_inc"]
 ro_f_ist_0 = constants["ro_f_ist_0"]
 p_0 = constants["p_0"]
 p_inc = constants["p_inc"]
-v_inc_start=constants["v_inc_start"]
-v_inc_finish=constants["v_inc_finish"]
 
+
+# Определяем A(u, v, s):
+def A_u_v_s(C: float, Q: float, m_0:  float, u: List[float], v: List[float], s: List[float]) -> List[float]:
+    return lambda_s_2nu_s # A(u, v, s) = lambda_s + 2nu_s
+
+
+# Определяем B(u, v, s):
+def B_u_v_s(C: float, Q: float, m_0:  float, u: List[float], v: List[float], s: List[float]) -> List[float]:
+    v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
+    return C * Q / (m_0 * v_val * v_val) - Q # B(u, v, s) = CQ/(mv^2) + Q
+
+
+# Определяем C(u, v, s):
+def C_u_v_s(C: float, Q: float, m_0:  float, p_0: float, ro_f_ist_0: float, u: List[float], v: List[float], s: List[float]) -> List[float]:
+    v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
+    return -(1 - m_0) * (p_0 + C * (Q / (m_0 * v_val) - ro_f_ist_0)) # C(u, v, s) = -(1-m)(p_0 + C(Q/mv - ro_f_ist_0))
+
+
+# Определяем D(u, v, s):
+def D_u_v_s(C: float, Q: float, b_0:  float, u: List[float], v: List[float], s: List[float]) -> float:
+    v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
+    return C * Q / (v_val * v_val) - b_0 * v_val - Q  # D(u, v, s) =  CQ/v^2 - b_0*v - Q
+
+
+# Определяем E(u, v, s):
+def E_u_v_s(d_0: float, c_0: float, v: List[float]) -> List[float]:
+    v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
+    return d_0 * v_val + c_0 * v_val * v_val  # E(u, v, s) = d_0*v+c_0*v^2
 
 # Определение функции для системы дифференциальных уравнений
 def fun(x: List[float], y: List[List[float]], Q: float, m_0: float) -> List[List[float]]: # y[0] = u, y[1] = v, y[2] = s
@@ -49,6 +79,17 @@ def fun(x: List[float], y: List[List[float]], Q: float, m_0: float) -> List[List
         ]
 
 
+# Определяем систему уравнений:
+def ode_system(C: float, Q: float, m_0: float, b_0: float, c_0: float, d_0: float, p_0: float, ro_f_ist_0: float, y: List[List[float]]) -> List[List[float]]: # y[0] = u, y[1] = v, y[2] = s
+    u, v, s = y
+
+    dudx = s
+    dsdx = - B_u_v_s(C, Q, m_0, u, v, s) * E_u_v_s(d_0, c_0, v) / (A_u_v_s(C, Q, m_0, u, v, s) * D_u_v_s(C, Q, b_0, u, v, s) - B_u_v_s(C, Q, m_0, u, v, s) * C_u_v_s(C, Q, m_0, p_0, ro_f_ist_0, u, v, s))
+    dvdx = A_u_v_s(C, Q, m_0, u, v, s) * E_u_v_s(d_0, c_0, v) / (A_u_v_s(C, Q, m_0, u, v, s) * D_u_v_s(C, Q, b_0, u, v, s) - B_u_v_s(C, Q, m_0, u, v, s) * C_u_v_s(C, Q, m_0, p_0, ro_f_ist_0, u, v, s))
+
+    return [dudx, dsdx, dvdx]
+
+
 # Определение граничных условий y[0] = u, y[1] = v, y[2] = s
 def bc_v_inc(ya: List[List[float]], yb: List[List[float]], v_inc: float, m_0: float) -> List[List[float]]:                               
     return np.array([
@@ -59,71 +100,13 @@ def bc_v_inc(ya: List[List[float]], yb: List[List[float]], v_inc: float, m_0: fl
 
 
 # Решение дифференциальной системы уравнений
-def solving_equations(v_inc: float, m_0: float, x_plot: List[float]) -> List[List[float]]:
+def solving_equations(v_inc: float, C: float, m_0: float, b_0: float, c_0: float, d_0: float, p_0: float, ro_f_ist_0: float, x_plot: List[float]) -> List[List[float]]:
     Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Вычисляем расход жидкости, используя граничное условие p(0)=p_inc и v(0)=v_inc/m
     x = np.linspace(0, L, N) # Заполняем массив координат х нулями
-    y_guess = np.zeros((3, x.size)) # Пример np.zeros((2, 1)) ---> array([[ 0.],[ 0.]]) - начальные значения функций
-    fun_v_inc = partial(fun, Q=Q, m_0=m_0) # Подставляем в функцию fun значение Q и m_0
-    result = solve_bvp(fun_v_inc, lambda ya, yb: bc_v_inc(ya, yb, v_inc, m_0), x, y_guess, tol=1e-6) # Решаем систему уравнений
+    y_guess = np.zeros((3, x.size))
+    result = solve_bvp(lambda x, y: ode_system(C, Q, m_0, b_0, c_0, d_0, p_0, ro_f_ist_0, y), lambda ya, yb: bc_v_inc(ya, yb, v_inc, m_0), x, y_guess, tol=1e-6)
     y_plot = result.sol(x_plot) # (u(x), v(x), s(x))
     return y_plot # y[0] = u, y[1] = v, y[2] = s
-
-
-# Вычисление числа Рейнольдса и В в зависимости от параметра v_inc
-def calculation_Re_and_B(x_plot: List[float], v_inc_start: float, v_inc_finish: float, M: int) -> List[List[float]]:
-    v_inc_values = np.linspace(v_inc_start, v_inc_finish, M) # Массив значений входящих скоростей v_inc
-    Re_values = [] # Массив чисел Рейнольдса для каждой скорости v_inc
-    B_values = [] # Массив чисел B для каждой скорости v_inc
-
-    for v_inc in v_inc_values:
-        solve = solving_equations(v_inc, m_0, x_plot) # y[0] = u, y[1] = v, y[2] = s
-        # Вычисление Re и B
-        Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Вычисляем расход жидкости, используя граничное условие p(0)=p_inc и v(0)=v_inc/m
-        Re = Q * np.sqrt(k / m_0) / nu
-        v = solve[1]  # Скорость жидкости
-        dvdx = -(d_0 * v + c_0 * v * v) / (C * Q / (v * v) - Q * v + b_0 * v)  # Производная скорости
-        B = v / (dvdx * np.sqrt(k / m_0))
-        # Добавление максимальных значений Re и B
-        Re_values.append(np.max(Re))
-        B_values.append(np.max(B))
-    
-    return [v_inc_values, Re_values, B_values]
-
-
-# Функция для вычисления максимальных значений сил
-def calculate_max_forces(v_inc: float, x_plot: List[float]) -> None:
-    F_d = []
-    F_c = []
-    F_b = []
-    m_values = np.linspace(0.01, 0.9, 200) # Задание параметров и значений m
-    for m in m_values:
-        y_plot = solving_equations(v_inc, m, x_plot)
-        v = np.where(y_plot[1] == 0, 1e-9, y_plot[1])  # Замена нулей на очень маленькое значение
-        Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Вычисляем расход жидкости, используя граничное условие p(0)=p_inc и v(0)=v_inc/m
-        # print(v)
-        print()
-        print("max v = ",abs(v).max())
-        print()
-        print()
-        print()
-        dvdx = -(d_0 * v + c_0 * v * v) / (C * Q / (v * v) - Q * v + b_0 * v) # Производная скорости
-        print("max dvdx = ",abs(dvdx).max())
-        F_d.append((abs(d_0 * v)).max())
-        F_c.append(abs((c_0 * v**2)).max()) 
-        F_b.append(abs((b_0 * v * dvdx)).max())
-
-
-    # print(F_b)
-    # Построение графика максимальных сил F_d, F_c, F_b от m
-    plt.figure()
-    plt.plot(m_values, F_d, label='F_d')
-    plt.plot(m_values, F_c, label='F_c')
-    plt.plot(m_values, F_b, label='F_b')
-    plt.xlabel('m')
-    plt.ylabel('Forces')
-    plt.legend()
-    plt.yscale('log') 
-    plt.show()
 
 
 # Построение графика скорости v/v_inc(x/L)
@@ -246,15 +229,15 @@ else:
 x_plot = np.linspace(0, L, N) # Массив значений координат х 
 
 
-answer = solving_equations(v_inc, m_0, x_plot)
+print(m_0)
+answer = solving_equations(v_inc, C, m_0, b_0, c_0, d_0, p_0, ro_f_ist_0, x_plot)
 
 b_0 = 0
-answer_withot_Fb = solving_equations(v_inc, m_0, x_plot)
+answer_withot_Fb = solving_equations(v_inc, C, m_0, b_0, c_0, d_0, p_0, ro_f_ist_0, x_plot)
 
 # plot_velocity_ratio(answer, answer_withot_Fb, v_inc, m_0, x_plot)
 # plot_u_l_ratio(answer, answer_withot_Fb, x_plot)
-# plot_density_ratio(answer, answer_withot_Fb, x_plot)
+plot_density_ratio(answer, answer_withot_Fb, x_plot)
 # plot_pressure_ratio(answer, answer_withot_Fb, x_plot)
 # plot_sigma_f_ratio(answer, answer_withot_Fb, x_plot)
 # plot_sigma_s_ratio(answer, answer_withot_Fb, x_plot)
-calculate_max_forces(v_inc, x_plot)

@@ -38,22 +38,22 @@ p_inc = constants["p_inc"]
 
 # Определяем коэффициент при интерактивных силах:
 def f_m(f_0: float, m_0: float, m: List[float]) -> List[float]:
-    m_val = np.where(m == 0, 1e-9, m)  # Замена нулей на очень маленькое значение
-    # return f_0 * (m_0 / m_val) * ((1 - m_val) / (1 - m_0)) # f = f_0 * (m0 / m) * ((1 - m) / (1 - m0))
-    return f_0 * (m_0 / m_val)
+    m_val = np.where(m == 0, 1e-6, m)  # Замена нулей на очень маленькое значение
+    return f_0 * (m_0 / m_val) * ((1 - m_val) / (1 - m_0)) # f = f_0 * (m0 / m) * ((1 - m) / (1 - m0))
+    # return f_0 * (m_0 / m_val)
 
 
 # Определяем A(m, v):
 def A_m_v(C: float, Q: float, m_0: float, a: float, c: float, h: float, m: List[float], v: List[float]) -> List[float]:
     m_val = np.where(m == 0, 1e-9, m)  # Замена нулей на очень маленькое значение
     v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
-    # return (1 - m_0) * C * Q / (m_val * m_val * v_val) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / ((1 - m_val) * (1 - m_val)) # A(m, v) = (1 - m_0) * C * Q / (m^2 * v) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / (1 - m)^2
-    return p_0 + C * (Q/ (m_val * v_val) - ro_f_ist_0) + h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / ((1 - m_val) * (1 - m_val))
+    return (1 - m_0) * C * Q / (m_val * m_val * v_val) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / ((1 - m_val) * (1 - m_val)) # A(m, v) = (1 - m_0) * C * Q / (m^2 * v) - h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / (1 - m)^2
+    # return p_0 + C * (Q/ (m_val * v_val) - ro_f_ist_0) + h / (1 - m_0) + 2 * (a + c) * (1 - m_0) / ((1 - m_val) * (1 - m_val))
 
 
 # Определяем B(m, v):
 def B_m_v(C: float, Q: float, m_0: float, b_0: float, m: List[float], v: List[float]) -> List[float]:
-    m_val = np.where(m == 0, 1e-9, m)  # Замена нулей на очень маленькое значение
+    m_val = np.where(m == 0, 1e-6, m)  # Замена нулей на очень маленькое значение
     v_val = np.where(v== 0, 1e-9, v)  # Замена нулей на очень маленькое значение
     return (1 - m_0) * C * Q / (m_val * v_val * v_val) + f_m(b_0, m_0, m) * v_val # B(m, v) = (1 - m_0) * C * Q / (m * v^2) + b(m) * v
 
