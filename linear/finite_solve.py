@@ -1,5 +1,8 @@
 from matplotlib import pyplot as plt
+from matplotlib import ticker as mtick
 import numpy as np
+from scipy import integrate
+from scipy import interpolate
 from scipy.integrate import solve_bvp
 from typing import List
 from functools import partial
@@ -86,7 +89,7 @@ def ode_system(C: float, Q: float, m_0: float, a: float, c: float, h: float, x: 
 # Определение граничных условий y[0] = m, y[1] = v
 def bc_v_inc(ya: List[List[float]], yb: List[List[float]], v_inc: float, m_0: float) -> List[List[float]]:                               
     return np.array([
-        yb[0] - m_0, # для m(b) = m_0
+        ya[0] - m_0, # для m(a) = m_0
         ya[1] - v_inc / m_0, # для v(a) = v_inc / m
         ])
 
@@ -104,14 +107,13 @@ def solving_equations(v_inc: float, m_0: float, a: float, c: float, h: float, x_
     y_plot = result.sol(x_plot) # (m(x), v(x))
     return y_plot # y[0] = m, y[1] = v
 
+
 # Построение графика пористости m(x/L)
 def plot_m_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, solve_without_Fb[0], label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, solve_with_Fb[0], label='b_0 != 0', linestyle='dotted')
-    plt.title("Пористость m от x/L")
-    plt.xlabel('x/L')
-    plt.ylabel('m')
+    plt.plot(x_plot / L, solve_without_Fb[0], label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, solve_with_Fb[0], label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"m от $x/L$", fontsize=16, loc='center')
     plt.legend()
     plt.grid()
     plt.show()
@@ -120,14 +122,104 @@ def plot_m_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[f
 # Построение графика скорости v/v_inc(x/L)
 def plot_velocity_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], v_inc: float, x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, solve_without_Fb[1] / v_inc, label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, solve_with_Fb[1] / v_inc, label='b_0 != 0', linestyle='dotted')
-    plt.title("Отношение v/v_inc от х/L")
-    plt.xlabel('x/L')
-    plt.ylabel('v/v_inc')
+    plt.plot(x_plot / L, solve_without_Fb[1] / v_inc * m_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, solve_with_Fb[1] / v_inc * m_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$vm_0/v_{inc}$ от $x/L$", fontsize=16, loc='center')
     plt.legend()
     plt.grid()
     plt.show()
+
+
+# Построение графика перемещения u(x/L)
+def plot_u_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], L: float, x_plot: List[float]) -> None:
+    f_with_Fb = integrate.cumtrapz(solve_with_Fb[0], x_plot, initial=0)
+    F_with_Fb = interpolate.interp1d(x_plot, f_with_Fb, fill_value="extrapolate")
+    f_without_Fb = integrate.cumtrapz(solve_without_Fb[0], x_plot, initial=0)
+    F_without_Fb = interpolate.interp1d(x_plot, f_without_Fb, fill_value="extrapolate")
+
+    u_with_Fb = F_with_Fb(x_plot)
+    u_without_Fb = F_without_Fb(x_plot)
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(x_plot / L, u_with_Fb / L, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, u_without_Fb / L, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$u/L$ от $x/L$", fontsize=16, loc='center')
+    plt.legend()
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.5f}'.format(x))) 
+    plt.grid()
+    plt.show()
+
+
+# Построение графика плотности жидкости ro_ist/ro_ist_0
+def plot_density_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
+    Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
+    ro_values_with_Fb = Q / (solve_with_Fb[0] * solve_with_Fb[1])
+    ro_values_without_Fb = Q / (solve_without_Fb[0] * solve_without_Fb[1])
+    plt.figure(figsize=(12, 6))
+    plt.plot(x_plot / L, ro_values_without_Fb / ro_f_ist_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, ro_values_with_Fb / ro_f_ist_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$\rho^{ист}_f/\rho^{ист}_{f_0}$ от $x/L$", fontsize=16, loc='center')
+    plt.legend()
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.4f}'.format(x))) 
+    plt.grid()
+    plt.show()
+
+
+# Построение графика давления жидкости p/p_0(x/L)
+def plot_pressure_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
+    Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
+    ro_values_with_Fb = Q / (solve_with_Fb[0] * solve_with_Fb[1])
+    ro_values_without_Fb = Q / (solve_without_Fb[0] * solve_without_Fb[1])
+    p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
+    p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
+    plt.figure(figsize=(12, 6))
+    plt.plot(x_plot / L, p_values_without_Fb / p_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, p_values_with_Fb / p_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$p/p_0$ от $x/L$")
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.1f}'.format(x))) 
+    plt.grid()
+    plt.show()
+
+
+# Построение графика тензора напряжения жидкости sigma_f/p_0(x/L)
+def plot_sigma_f_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
+    Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
+    ro_values_with_Fb = Q / (solve_with_Fb[0] * solve_with_Fb[1])
+    ro_values_without_Fb = Q / (solve_without_Fb[0] * solve_without_Fb[1])
+    p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
+    p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
+    sigma_f_with_Fb = - solve_with_Fb[0] * p_values_with_Fb # sigma_f =  - p * m
+    sigma_f_without_Fb = - solve_without_Fb[0] * p_values_without_Fb
+    plt.figure(figsize=(12, 6))
+    plt.plot(x_plot / L, sigma_f_without_Fb / p_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, sigma_f_with_Fb / p_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$S^{xx}_f/p_0$ от $x/L$", fontsize=16, loc='center')
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.2f}'.format(x))) 
+    plt.grid()
+    plt.legend()
+    plt.show()
+
+
+# Построение графика тензора напряжения каркаса sigma_s/p_0(x/L)
+def plot_sigma_s_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
+    Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Q = ro_ist * m * v
+    ro_values_with_Fb = Q / (solve_with_Fb[0] * solve_with_Fb[1])
+    ro_values_without_Fb = Q / (solve_without_Fb[0] * solve_without_Fb[1])
+    p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
+    p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
+    fueling_part_with_Fb = -(1 - solve_with_Fb[0]) * p_values_with_Fb
+    fueling_part_without_Fb = -(1 - solve_without_Fb[0]) * p_values_without_Fb
+    sigma_s_with_Fb = fueling_part_with_Fb + 2 * (a + c) - h * (1 - solve_with_Fb[0]) * (1 - solve_with_Fb[0]) / ((1 - m_0) * (1 - m_0))
+    sigma_s_without_Fb = fueling_part_without_Fb + 2 * (a + c) - h * (1 - solve_without_Fb[0]) * (1 - solve_without_Fb[0]) / ((1 - m_0) * (1 - m_0))
+    plt.figure(figsize=(12, 6))
+    plt.plot(x_plot / L, sigma_s_without_Fb / p_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, sigma_s_with_Fb / p_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$P^{xx}/p_0$ от $x/L$", fontsize=16, loc='center')
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.2f}'.format(x))) 
+    plt.grid()
+    plt.legend()
+    plt.show()
+
 
 
 # Получение значения,
@@ -142,19 +234,14 @@ else:
     M = 200
 
 x_plot = np.linspace(0, L, N) # Массив значений координат х 
-
 answer = solving_equations(v_inc, m_0, a, c, h, x_plot)
-print(answer)
-plt.figure(figsize=(12, 6))
-plt.plot(x_plot / L, answer[0], label='b_0 = 0', linestyle='dashed')
-plt.title("Пористость m от x/L")
-plt.xlabel('x/L')
-plt.ylabel('m')
-plt.legend()
-plt.grid()
-plt.show()
-# b_0 = 0
-# answer_withot_Fb = solving_equations(v_inc, m_0, a, c, h, x_plot)
+b_0 = 0
+answer_withot_Fb = solving_equations(v_inc, m_0, a, c, h, x_plot)
 
-# # plot_m_ratio(answer,answer_withot_Fb, x_plot)
-# plot_velocity_ratio(answer, answer_withot_Fb, v_inc, x_plot)
+plot_m_ratio(answer,answer_withot_Fb, x_plot)
+plot_velocity_ratio(answer, answer_withot_Fb, v_inc, x_plot)
+plot_u_ratio(answer, answer_withot_Fb, L, x_plot)
+plot_density_ratio(answer, answer_withot_Fb, x_plot)
+plot_pressure_ratio(answer, answer_withot_Fb, x_plot)
+plot_sigma_f_ratio(answer, answer_withot_Fb, x_plot)
+plot_sigma_s_ratio(answer, answer_withot_Fb, x_plot)

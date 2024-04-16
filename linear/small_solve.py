@@ -95,62 +95,66 @@ def calculate_max_forces(v_inc: float, x_plot: List[float]) -> None:
     F_d = []
     F_c = []
     F_b = []
-    m_values = np.linspace(0.01, 0.9, 200) # Задание параметров и значений m
+    m_values = np.linspace(0.005, 1, 1000) # Задание параметров и значений m
     for m in m_values:
         y_plot = solving_equations(v_inc, m, x_plot)
         v = np.where(y_plot[1] == 0, 1e-9, y_plot[1])  # Замена нулей на очень маленькое значение
         Q = ((p_inc - p_0) / C + ro_f_ist_0) * v_inc # Вычисляем расход жидкости, используя граничное условие p(0)=p_inc и v(0)=v_inc/m
-        # print(v)
-        print()
-        print("max v = ",abs(v).max())
-        print()
-        print()
-        print()
         dvdx = -(d_0 * v + c_0 * v * v) / (C * Q / (v * v) - Q * v + b_0 * v) # Производная скорости
-        print("max dvdx = ",abs(dvdx).max())
         F_d.append((abs(d_0 * v)).max())
         F_c.append(abs((c_0 * v**2)).max()) 
         F_b.append(abs((b_0 * v * dvdx)).max())
 
-
-    # print(F_b)
     # Построение графика максимальных сил F_d, F_c, F_b от m
     plt.figure()
-    plt.plot(m_values, F_d, label='F_d')
-    plt.plot(m_values, F_c, label='F_c')
-    plt.plot(m_values, F_b, label='F_b')
+    plt.plot(m_values, F_d, label=r'$F_d$')
+    plt.plot(m_values, F_c, label=r'$F_c$')
+    plt.plot(m_values, F_b, label=r'$F_b$')
+    plt.title(r"$F_d$,$F_c$,$F_b$  от $m$", fontsize=16, loc='center')
     plt.xlabel('m')
     plt.ylabel('Forces')
     plt.legend()
-    plt.yscale('log') 
+    plt.yscale('symlog')
     plt.show()
 
 
-# Построение графика скорости v/v_inc(x/L)
+# Построение графика скорости mv/v_inc(x/L)
 def plot_velocity_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], v_inc: float, m_0: float, x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, m_0 * solve_without_Fb[1] / v_inc, label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, m_0 * solve_with_Fb[1] / v_inc, label='b_0 != 0', linestyle='dotted')
-    plt.title("Отношение mv/v_inc от х/L")
-    plt.xlabel('x/L')
-    plt.ylabel('mv/v_inc')
+    plt.plot(x_plot / L, m_0 * solve_without_Fb[1] / v_inc, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, m_0 * solve_with_Fb[1] / v_inc, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$mv/v_{inc}$ от $x/L$", fontsize=16, loc='center')
     plt.legend()
-    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.8f}'.format(x))) 
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.4f}'.format(x))) 
     plt.grid()
+
+    correlation_matrix = np.corrcoef(solve_with_Fb[1], solve_without_Fb[1])
+    correlation = correlation_matrix[0, 1]
+    norm_diff = np.linalg.norm(solve_with_Fb[1] - solve_without_Fb[1])
+    norm = np.linalg.norm(solve_without_Fb[1])
+    plt.text(0.95, 0.1, r"Корреляция $v_{{b_0 \neq 0}}$ и $v_{{b_0 = 0}}$ = {:.2f}".format(correlation), transform=plt.gca().transAxes, ha='right')
+    plt.text(0.95, 0.15, r"Норма $\frac{{\|v_{{b_0 \neq 0}} - v_{{b_0 = 0}}\|}}{{\|v_{{b_0 = 0}}\|}}$ = {:.2f}".format(norm_diff/norm), transform=plt.gca().transAxes, ha='right')
+
     plt.show()
 
 
 # Построение графика перемещения u/L(x/L)
 def plot_u_l_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[List[float]], x_plot: List[float]) -> None:
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, solve_without_Fb[0] / L, label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, solve_with_Fb[0] / L, label='b_0 != 0', linestyle='dotted')
-    plt.title("u/L от x/L")
-    plt.xlabel('x/L')
-    plt.ylabel('u/L')
+    plt.plot(x_plot / L, solve_without_Fb[0] / L, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, solve_with_Fb[0] / L, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$u/L$ от $x/L$", fontsize=16, loc='center')
     plt.legend()
-    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.8f}'.format(x))) 
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.5f}'.format(x))) 
     plt.grid()
+
+    correlation_matrix = np.corrcoef(solve_with_Fb[0], solve_without_Fb[0])
+    correlation = correlation_matrix[0, 1]
+    norm_diff = np.linalg.norm(solve_with_Fb[0] - solve_without_Fb[0])
+    norm = np.linalg.norm(solve_without_Fb[0])
+    plt.text(0.95, 0.1, r"Корреляция $u_{{b_0 \neq 0}}$ и $u_{{b_0 = 0}}$ = {:.2f}".format(correlation), transform=plt.gca().transAxes, ha='right')
+    plt.text(0.95, 0.15, r"Норма $\frac{{\|u_{{b_0 \neq 0}} - u_{{b_0 = 0}}\|}}{{\|u_{{b_0 = 0}}\|}}$ = {:.2f}".format(norm_diff/norm), transform=plt.gca().transAxes, ha='right')
+
     plt.show()
 
 
@@ -160,14 +164,20 @@ def plot_density_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[
     ro_values_with_Fb = Q / (m_0 * solve_with_Fb[1])
     ro_values_without_Fb = Q / (m_0 * solve_without_Fb[1])
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, ro_values_without_Fb / ro_f_ist_0, label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, ro_values_with_Fb / ro_f_ist_0, label='b_0 != 0', linestyle='dotted')
-    plt.title("ro_f_ist/ro_f_ist_0 от x/L")
-    plt.xlabel('x/L')
-    plt.ylabel('ro_f_ist/ro_f_ist_0')
+    plt.plot(x_plot / L, ro_values_without_Fb / ro_f_ist_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, ro_values_with_Fb / ro_f_ist_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$\rho^{ист}_f/\rho^{ист}_{f_0}$ от $x/L$", fontsize=16, loc='center')
     plt.legend()
-    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.8f}'.format(x))) 
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.4f}'.format(x))) 
     plt.grid()
+
+    correlation_matrix = np.corrcoef(ro_values_with_Fb, ro_values_without_Fb)
+    correlation = correlation_matrix[0, 1]
+    norm_diff = np.linalg.norm(ro_values_with_Fb - ro_values_without_Fb)
+    norm = np.linalg.norm(ro_values_without_Fb)
+    plt.text(0.05, 0.1, r"Корреляция $\rho_{{b_0 \neq 0}}$ и $\rho_{{b_0 = 0}}$ = {:.2f}".format(correlation), transform=plt.gca().transAxes, ha='left')
+    plt.text(0.05, 0.15, r"Норма $\frac{{\|\rho_{{b_0 \neq 0}} - \rho_{{b_0 = 0}}\|}}{{\|\rho_{{b_0 = 0}}\|}}$ = {:.2f}".format(norm_diff/norm), transform=plt.gca().transAxes, ha='left')
+
     plt.show()
 
 
@@ -179,13 +189,19 @@ def plot_pressure_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List
     p_values_with_Fb = (p_0 + C * (ro_values_with_Fb - ro_f_ist_0)) # p = p_0 + C * (ro_ist - ro_ist_0)
     p_values_without_Fb = (p_0 + C * (ro_values_without_Fb - ro_f_ist_0))
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, p_values_without_Fb / p_0, label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, p_values_with_Fb / p_0, label='b_0 != 0', linestyle='dotted')
-    plt.title("p/p_0 от x/L")
-    plt.xlabel('x/L')
-    plt.ylabel('p/p_0')
-    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.8f}'.format(x))) 
+    plt.plot(x_plot / L, p_values_without_Fb / p_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, p_values_with_Fb / p_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$p/p_0$ от $x/L$")
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.1f}'.format(x))) 
     plt.grid()
+
+    correlation_matrix = np.corrcoef(p_values_with_Fb, p_values_without_Fb)
+    correlation = correlation_matrix[0, 1]
+    norm_diff = np.linalg.norm(p_values_with_Fb - p_values_without_Fb)
+    norm = np.linalg.norm(p_values_without_Fb)
+    plt.text(0.05, 0.1, r"Корреляция $p_{{b_0 \neq 0}}$ и $p_{{b_0 = 0}}$ = {:.2f}".format(correlation), transform=plt.gca().transAxes, ha='left')
+    plt.text(0.05, 0.15, r"Норма $\frac{{\|p_{{b_0 \neq 0}} - p_{{b_0 = 0}}\|}}{{\|p_{{b_0 = 0}}\|}}$ = {:.2f}".format(norm_diff/norm), transform=plt.gca().transAxes, ha='left')
+
     plt.show()
 
 
@@ -199,13 +215,20 @@ def plot_sigma_f_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[
     sigma_f_with_Fb = - m_0 * p_values_with_Fb # sigma_f =  - p * m
     sigma_f_without_Fb = - m_0 * p_values_without_Fb
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, sigma_f_without_Fb / p_0, label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, sigma_f_with_Fb / p_0, label='b_0 != 0', linestyle='dotted')
-    plt.title("sigma_f/p_0 от x/L")
-    plt.xlabel('x/L')
-    plt.ylabel('sigma_f/p_0')
-    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.8f}'.format(x))) 
+    plt.plot(x_plot / L, sigma_f_without_Fb / p_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, sigma_f_with_Fb / p_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$\sigma_f/p_0$ от $x/L$", fontsize=16, loc='center')
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.2f}'.format(x))) 
     plt.grid()
+
+    correlation_matrix = np.corrcoef(sigma_f_with_Fb, sigma_f_without_Fb)
+    correlation = correlation_matrix[0, 1]
+    norm_diff = np.linalg.norm(sigma_f_with_Fb - sigma_f_without_Fb)
+    norm = np.linalg.norm(sigma_f_without_Fb)
+    plt.text(0.95, 0.1, r"Корреляция $\sigma_{{f_{{b_0 \neq 0}}}}$ и $\sigma_{{f_{{b_0 = 0}}}}$ = {:.2f}".format(correlation), transform=plt.gca().transAxes, ha='right')
+    plt.text(0.95, 0.15, r"Норма $\frac{{\|\sigma_{{f_{{b_0 \neq 0}}}} - \sigma_{{f_{{b_0 = 0}}}}\|}}{{\|\sigma_{{f_{{b_0 = 0}}}}\|}}$ = {:.2f}".format(norm_diff/norm), transform=plt.gca().transAxes, ha='right')
+
+    plt.legend()
     plt.show()
 
 
@@ -221,13 +244,20 @@ def plot_sigma_s_ratio(solve_with_Fb: List[List[float]], solve_without_Fb: List[
     sigma_s_with_Fb = fueling_part_with_Fb + lambda_s_2nu_s * solve_with_Fb[2]
     sigma_s_without_Fb = fueling_part_without_Fb + lambda_s_2nu_s * solve_without_Fb[2]
     plt.figure(figsize=(12, 6))
-    plt.plot(x_plot / L, sigma_s_without_Fb / p_0, label='b_0 = 0', linestyle='dashed')
-    plt.plot(x_plot / L, sigma_s_with_Fb / p_0, label='b_0 != 0', linestyle='dotted')
-    plt.title("sigma_s/p_0 от x/L")
-    plt.xlabel('x/L')
-    plt.ylabel('sigma_s/p_0')
-    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.8f}'.format(x))) 
+    plt.plot(x_plot / L, sigma_s_without_Fb / p_0, label=r'$b_0 = 0$', linestyle='dashed')
+    plt.plot(x_plot / L, sigma_s_with_Fb / p_0, label=r'$b_0 \neq 0$', linestyle='dotted')
+    plt.title(r"$\sigma_s/p_0$ от $x/L$", fontsize=16, loc='center')
+    plt.gca().yaxis.set_major_formatter(mtick.FuncFormatter(lambda x, _: '{:.2f}'.format(x))) 
     plt.grid()
+
+    correlation_matrix = np.corrcoef(sigma_s_with_Fb, sigma_s_without_Fb)
+    correlation = correlation_matrix[0, 1]
+    norm_diff = np.linalg.norm(sigma_s_with_Fb - sigma_s_without_Fb)
+    norm = np.linalg.norm(sigma_s_without_Fb)
+    plt.text(0.05, 0.1, r"Корреляция $\sigma_{{s_{{b_0 \neq 0}}}}$ и $\sigma_{{s_{{b_0 = 0}}}}$ = {:.2f}".format(correlation), transform=plt.gca().transAxes, ha='left')
+    plt.text(0.05, 0.15, r"Норма $\frac{{\|\sigma_{{s_{{b_0 \neq 0}}}} - \sigma_{{s_{{b_0 = 0}}}}\|}}{{\|\sigma_{{s_{{b_0 = 0}}}}\|}}$ = {:.2f}".format(norm_diff/norm), transform=plt.gca().transAxes, ha='left')
+
+    plt.legend()
     plt.show()
 
 
@@ -257,4 +287,15 @@ answer_withot_Fb = solving_equations(v_inc, m_0, x_plot)
 # plot_pressure_ratio(answer, answer_withot_Fb, x_plot)
 # plot_sigma_f_ratio(answer, answer_withot_Fb, x_plot)
 # plot_sigma_s_ratio(answer, answer_withot_Fb, x_plot)
-calculate_max_forces(v_inc, x_plot)
+# calculate_max_forces(v_inc, x_plot)
+
+result_file_path = os.path.expanduser("./small.txt")
+# Запись результатов в файл
+with open(result_file_path, "w") as result_file:
+    result_file.write("Результаты с F_b\n")
+    for i in range(len(x_plot)):
+        result_file.write("x = {:.3f}, u = {:.6f}, v = {:.6f}, s = {:.6f}\n".format(x_plot[i], answer[0][i], answer[1][i], answer[2][i]))
+
+    result_file.write("\nРезультаты без F_b\n")
+    for i in range(len(x_plot)):
+        result_file.write("x = {:.3f}, u = {:.6f}, v = {:.6f}, s = {:.6f}\n".format(x_plot[i], answer_withot_Fb[0][i], answer_withot_Fb[1][i], answer_withot_Fb[2][i]))
